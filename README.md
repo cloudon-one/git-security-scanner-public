@@ -35,7 +35,7 @@ jobs:
       - uses: actions/checkout@v4
       
       - name: Run Security Scan
-        uses: cloudon-one/git-security-scanner@v1.0.0
+        uses: cloudon-one/git-security-scanner@v1.1.1
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           fail_on_critical: true
@@ -74,7 +74,7 @@ jobs:
 ### Basic Security Check
 
 ```yaml
-- uses: cloudon-one/git-security-scanner@v1.0.0
+- uses: cloudon-one/git-security-scanner@v1.1.1
   with:
     fail_on_critical: true
     create_pr_comment: true
@@ -83,7 +83,7 @@ jobs:
 ### Advanced Configuration
 
 ```yaml
-- uses: cloudon-one/git-security-scanner@v1.0.0
+- uses: cloudon-one/git-security-scanner@v1.1.1
   id: security
   with:
     scan_type: all
@@ -110,7 +110,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: cloudon-one/git-security-scanner@v1.0.0
+      - uses: cloudon-one/git-security-scanner@v1.1.1
         with:
           fail_on_critical: false
 ```
@@ -124,7 +124,7 @@ jobs:
 ### Build Docker Image
 
 ```bash
-docker build -t security-scanner .
+docker build -t git-security-scanner .
 ```
 
 ### Run Local Scan

@@ -216,8 +216,8 @@ git push origin v1.0.1
 
 4. Build and push Docker image:
 ```bash
-docker build -t ghcr.io/cloudon-one/security-scanner:v1.0.1 .
-docker push ghcr.io/cloudon-one/security-scanner:v1.0.1
+docker build -t ghcr.io/cloudon-one/git-security-scanner:v1.1.1 .
+docker push ghcr.io/cloudon-one/git-security-scanner:v1.1.1
 ```
 
 ## Project Structure
