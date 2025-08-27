@@ -1,7 +1,7 @@
 # Git Security Scanner - GitHub Action
 
 [![GitHub Marketplace](https://img.shields.io/badge/Marketplace-Git%20Security%20Scanner-blue?logo=github)](https://github.com/marketplace/actions/git-security-scanner)
-[![Release](https://img.shields.io/badge/Release-v1.0.0-green)](https://github.com/cloudon-one/git-security-scanner/releases/tag/v1.0.0)
+[![Release](https://img.shields.io/badge/Release-v1.1.1-green)](https://github.com/cloudon-one/git-security-scanner/releases/tag/v1.0.0)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Docker](https://img.shields.io/badge/Docker-ghcr.io-blue?logo=docker)](https://ghcr.io/cloudon-one/security-scanner)
 
