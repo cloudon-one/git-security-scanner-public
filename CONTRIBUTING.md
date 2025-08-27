@@ -49,13 +49,13 @@ By participating in this project, you agree to maintain a respectful and inclusi
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/cloudon-one/git-security-scanner.git
-cd git-security-scanner/public-repo
+git clone https://github.com/cloudon-one/git-security-scanner-public.git
+cd git-security-scanner-public
 ```
 
 2. Build the Docker image:
 ```bash
-docker build -t security-scanner:dev .
+docker build -t git-security-scanner:dev .
 ```
 
 3. Test local scanning:

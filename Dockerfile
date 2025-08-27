@@ -1,5 +1,4 @@
 # Multi-stage Dockerfile for Security Scanner
-# Optimized for security, performance, and minimal attack surface
 
 ARG ALPINE_VERSION=3.19
 ARG PYTHON_VERSION=3.12
@@ -67,13 +66,13 @@ RUN ls -la /downloads/ && \
 FROM alpine:${ALPINE_VERSION}
 
 # Metadata labels following OCI specification
-LABEL org.opencontainers.image.title="Security Scanner" \
+LABEL org.opencontainers.image.title="Git Security Scanner" \
       org.opencontainers.image.description="Containerized security scanning tool with Gitleaks, Trivy, and OSV-Scanner" \
-      org.opencontainers.image.vendor="Security Scanner Team" \
-      org.opencontainers.image.version="2.1.0" \
-      org.opencontainers.image.url="https://github.com/cloudon-one/security-scanner" \
-      org.opencontainers.image.documentation="https://github.com/cloudon-one/security-scanner/blob/main/README.md" \
-      org.opencontainers.image.source="https://github.com/cloudon-one/security-scanner" \
+      org.opencontainers.image.vendor="CloudOn-One Security Team" \
+      org.opencontainers.image.version="1.0.0" \
+      org.opencontainers.image.url="https://github.com/cloudon-one/git-security-scanner-public" \
+      org.opencontainers.image.documentation="https://github.com/cloudon-one/git-security-scanner-public/blob/main/README.md" \
+      org.opencontainers.image.source="https://github.com/cloudon-one/git-security-scanner-public" \
       org.opencontainers.image.licenses="MIT"
 
 # Install runtime dependencies
@@ -157,12 +156,3 @@ ENTRYPOINT ["/app/run_scans.sh"]
 
 # Default command runs all scans
 CMD ["all"]
-
-# Security and performance optimizations
-# - Use multi-stage builds to reduce image size
-# - Run as non-root user
-# - Pin dependency versions
-# - Validate downloaded binaries
-# - Set proper file permissions
-# - Use health checks
-# - Minimize installed packages
