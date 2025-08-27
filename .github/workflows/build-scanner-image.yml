@@ -1,0 +1,106 @@
+name: Build Scanner Container Image
+
+on:
+  push:
+    branches: [main, develop]
+    paths: ['Dockerfile', 'git-audit-script.py', 'run_scans.sh', 'gitleaks.toml', 'scripts/**']
+  pull_request:
+    branches: [main, develop]
+    paths: ['Dockerfile', 'git-audit-script.py', 'run_scans.sh', 'gitleaks.toml', 'scripts/**']
+  schedule:
+    - cron: '0 4 * * 1' # Weekly rebuild for security updates
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: security-scanner
+
+permissions:
+  contents: read
+  packages: write
+  attestations: write
+  security-events: write
+  actions: write
+
+jobs:
+  build-and-test:
+    name: Build and Test Scanner Image
+    runs-on: ubuntu-latest
+    outputs:
+      image: ${{ steps.meta.outputs.tags }}
+      digest: ${{ steps.build.outputs.digest }}
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          platforms: linux/amd64,linux/arm64
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=production,enable={{is_default_branch}}
+
+      - name: Build and push scanner image
+        id: build
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Test scanner functionality
+        run: |
+          # Test that scanner starts correctly
+          docker run --rm --platform=linux/amd64 \
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:latest \
+            --help
+          
+          # Test tools are available
+          docker run --rm --platform=linux/amd64 \
+            --entrypoint=/bin/sh \
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:latest \
+            -c "gitleaks version && trivy version"
+
+      - name: Security scan of built image
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:latest
+          format: 'sarif'
+          output: 'image-scan.sarif'
+        continue-on-error: true
+
+      - name: Upload image scan results to GitHub (optional)
+        if: always() && vars.ENABLE_CODEQL_UPLOAD == 'true'
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: 'image-scan.sarif'
+          category: 'container-security'
+        continue-on-error: true
+
+      - name: Image build completed
+        if: github.ref == 'refs/heads/main'
+        run: |
+          echo "✅ Scanner image built and pushed successfully"
+          echo "Image: ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:latest"
+          echo "Repository security scan workflow will run automatically on push events"
