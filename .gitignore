@@ -66,3 +66,4 @@ out/
 /tmp/security-scan-results/
 /security-scan-results/
 .claude/settings.local.json
+MARKETPLACE_PUBLISHING.md

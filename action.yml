@@ -1,5 +1,5 @@
 name: 'Git Security Scanner'
-description: 'Comprehensive security scanning for GitHub repositories using Gitleaks and Trivy to detect secrets, vulnerabilities, and misconfigurations with rich json/html reporting'
+description: 'Security scanning for GitHub repos using Gitleaks and Trivy to detect secrets, vulnerabilities, and misconfigurations'
 author: 'CloudOn One'
 
 branding:
