@@ -123,8 +123,8 @@ runs:
           TAG=$(echo "${{ github.ref_name }}" | sed 's/\//-/g')
         fi
         
-        PRIMARY_IMAGE="ghcr.io/cloudon-one/git-security-scanner-public:${TAG}"
-        FALLBACK_IMAGE="ghcr.io/cloudon-one/git-security-scanner-public:${{ inputs.scanner_version }}"
+        PRIMARY_IMAGE="ghcr.io/cloudon-one/git-security-scanner:${TAG}"
+        FALLBACK_IMAGE="ghcr.io/cloudon-one/git-security-scanner:${{ inputs.scanner_version }}"
         
         echo "Primary image: ${PRIMARY_IMAGE}"
         echo "Fallback image: ${FALLBACK_IMAGE}"
