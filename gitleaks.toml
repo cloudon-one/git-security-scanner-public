@@ -1,0 +1,394 @@
+title = "GCP, Terraform, Helm, K8s, and Bash Security Scanner Configuration"
+
+# Generic credential patterns that apply across all file types
+[[rules]]
+    id = "generic-api-key"
+    description = "Generic API Key y"
+    regex = '''(?i)(?:api[_-]?key|apikey|api[_-]?token|x[_-]?api[_-]?key)\s*[=:]\s*['"]([a-zA-Z0-9_\-=]{24,64})['"]'''
+    secretGroup = 1
+    tags = ["key", "API", "generic"]
+    [rules.allowlist]
+        regexes = [
+            '''your_api_key''',
+            '''YOUR_API_KEY''',
+            '''<api_key>''',
+            '''\$\{[^}]+\}''', 
+            '''\$[A-Z_]+''',     
+            '''example''',
+            '''sample''',
+            '''placeholder''',
+            '''dummy''',
+            '''test''',
+            '''fake''',
+            '''getUserMobileApiKeys''',
+            '''getMobileApiKeys''',
+            '''getApiKeys''',
+            '''apiKeysProvider''',
+            '''ApiKeysProvider''',
+            '''ApiKeysService''',
+            '''apiKeysService'''
+        ]
+
+[[rules]]
+    id = "hardcoded-password-literal"
+    description = "Hardcoded password literal values only"
+    regex = '''(?i)(?:password|passwd|pwd)\s*[=:]\s*['"]([^'"${\s]{12,64})['"]'''
+    secretGroup = 1
+    tags = ["password", "hardcoded", "literal"]
+    [rules.allowlist]
+        regexes = [
+            '''your_.*''',
+            '''YOUR_.*''',
+            '''example''',
+            '''sample''',
+            '''placeholder''',
+            '''dummy''',
+            '''test''',
+            '''fake''',
+            '''password''',
+            '''passwd''',
+            '''pwd''',
+            '''changeme''',
+            '''123456''',
+            '''admin''',
+            '''root''',
+            '''postgres'''
+        ]
+
+[[rules]]
+    id = "hardcoded-secret-literal"
+    description = "Hardcoded secret literal values only"
+    regex = '''(?i)(?:secret|api_secret|client_secret)\s*[=:]\s*['"]([^'"${\s]{20,64})['"]'''
+    secretGroup = 1
+    tags = ["secret", "hardcoded", "literal"]
+    [rules.allowlist]
+        regexes = [
+            '''your_.*''',
+            '''YOUR_.*''',
+            '''example''',
+            '''sample''',
+            '''placeholder''',
+            '''dummy''',
+            '''test''',
+            '''fake''',
+            '''secret''',
+            '''clientSecret''',
+            '''client_secret'''
+        ]
+
+# GCP specific patterns
+[[rules]]
+    id = "gcp-api-key"
+    description = "Google API Key"
+    regex = '''(?:AIza[a-zA-Z0-9_\-]{35})'''
+    tags = ["key", "google", "gcp"]
+
+[[rules]]
+    id = "gcp-service-account-json"
+    description = "GCP Service Account JSON Key"
+    regex = '''"type":\s*"service_account"'''
+    keywords = ["private_key", "client_email", "project_id"]
+    tags = ["key", "google", "gcp"]
+    [rules.allowlist]
+        regexes = [
+            '''example''',
+            '''sample''',
+            '''placeholder''',
+            '''dummy''',
+            '''test''',
+            '''fake''',
+            '''gccp-key.json''',
+            '''\\"service_account\\"'''
+        ]
+
+[[rules]]
+    id = "gcp-private-key-actual"
+    description = "Actual GCP Private Key"
+    regex = '''-----BEGIN PRIVATE KEY-----[A-Za-z0-9+/\n\r]{100,}-----END PRIVATE KEY-----'''
+    tags = ["key", "google", "gcp"]
+
+[[rules]]
+    id = "gcp-oauth-access-token"
+    description = "Google OAuth Access Token"
+    regex = '''ya29\.([a-zA-Z0-9_\-]{30,100})'''
+    tags = ["key", "google", "gcp"]
+
+# Terraform specific rules - more focused
+[[rules]]
+    id = "terraform-hardcoded-secret"
+    description = "Terraform hardcoded secrets"
+    regex = '''(?i)(?:password|secret|token|key|cert|certificate|credential)s?\s*=\s*["']([^"'${}]{16,64})["']'''
+    secretGroup = 1
+    tags = ["terraform", "hardcoded"]
+    [rules.allowlist]
+        regexes = [
+            '''your_.*''',
+            '''YOUR_.*''',
+            '''example''',
+            '''sample''',
+            '''placeholder''',
+            '''dummy''',
+            '''test''',
+            '''fake''',
+            '''\$\{[^}]+\}''',
+            '''\$[A-Z_]+''',
+            '''secrets_found''',
+            '''vulnerabilities_found''',
+            '''failed_checks''',
+            '''/root/\.config/gcloud''', # Path-like string
+            '''auth-health-check''',
+            '''API_KEY_GET_TOKEN'''
+        ]
+
+[[rules]]
+    id = "terraform-gcp-credentials"
+    description = "GCP credentials in Terraform"
+    regex = '''credentials\s*=\s*["']([^"'${}]{12,64})["']'''
+    secretGroup = 1
+    tags = ["terraform", "gcp", "credentials"]
+    [rules.allowlist]
+        regexes = [
+            '''your_.*''',
+            '''YOUR_.*''',
+            '''example''',
+            '''sample''',
+            '''placeholder''',
+            '''dummy''',
+            '''test''',
+            '''fake''',
+            '''\$\{[^}]+\}''',
+            '''\$[A-Z_]+'''
+        ]
+
+# Kubernetes and Helm specific rules
+[[rules]]
+    id = "k8s-secret-literal-actual"
+    description = "Kubernetes Secret with actual literal values"
+    regex = '''--from-literal=([^=]+)=([A-Za-z0-9+/]{20,})''' # Matches the value part
+    secretGroup = 2 # Captures the actual secret value
+    tags = ["kubernetes", "secret", "literal"]
+    [rules.allowlist]
+        regexes = [
+            '''example''',
+            '''sample''',
+            '''placeholder''',
+            '''dummy''',
+            '''test''',
+            '''fake''',
+            '''\$\{[^}]+\}''',
+            '''\$[A-Z_]+'''
+        ]
+
+[[rules]]
+    id = "k8s-basic-auth-actual"
+    description = "Kubernetes basic auth credentials - actual values"
+    regex = '''(?i)(?:username|password):\s*["']?([^"'\s${}]{12,64})["']?'''
+    secretGroup = 1
+    tags = ["kubernetes", "auth"]
+    [rules.allowlist]
+        regexes = [
+            '''your_.*''',
+            '''YOUR_.*''',
+            '''example''',
+            '''sample''',
+            '''placeholder''',
+            '''dummy''',
+            '''test''',
+            '''fake''',
+            '''\$\{[^}]+\}''',
+            '''\$[A-Z_]+''',
+            '''logger\.''',       
+            '''print\(''',
+            '''echo\s+''',
+            '''log\.''',
+            '''console\.''',
+            '''\$BITBUCKET_APP_PASSW''', 
+            '''postgres'''         
+        ]
+
+# Bash script specific rules
+[[rules]]
+    id = "bash-environment-secrets-actual"
+    description = "Environment variables with actual secrets in bash scripts"
+    regex = '''(?i)export\s+(?:(?:GOOGLE|GCP|GCR)_[\w]*|(?:KUBE|K8S)_[\w]*|(?:TF|TERRAFORM)_[\w]*|(?:ACCESS|SECRET)_(?:KEY|TOKEN)|(?:API|CLIENT)_(?:KEY|SECRET|TOKEN))=["']?([^"'\s${}]{12,64})["']?'''
+    secretGroup = 1
+    tags = ["bash", "environment", "export"]
+    [rules.allowlist]
+        regexes = [
+            '''your_.*''',
+            '''YOUR_.*''',
+            '''example''',
+            '''sample''',
+            '''placeholder''',
+            '''dummy''',
+            '''test''',
+            '''fake''',
+            '''\$\{[^}]+\}''',
+            '''\$[A-Z_]+''',
+            '''/root/\.config/gcloud''',
+            '''gcp-key\.json''',
+            '''gcp-service-account\.json''',
+            '''\.json$''',
+            '''/tmp/.*\.json''',
+            '''.*\.json'''
+        ]
+
+[[rules]]
+    id = "bash-curl-auth-actual"
+    description = "Authentication in curl commands - actual tokens"
+    regex = '''curl\s+.*--header\s+["']?Authorization:\s*(?:Basic|Bearer|token)\s+([a-zA-Z0-9+/=_\-]{20,64})["']?'''
+    secretGroup = 1
+    tags = ["bash", "curl", "authorization"]
+
+# Database connection strings
+[[rules]]
+    id = "database-connection-string"
+    description = "Database connection string with credentials"
+    regex = '''(?i)(?:postgres|mysql|mongodb)://[^:]+:([^@\s]{8,})@''' # Captures password
+    secretGroup = 1
+    tags = ["database", "connection"]
+    [rules.allowlist]
+        regexes = [
+            '''password''',
+            '''secret''',
+            '''your_.*''',
+            '''YOUR_.*''',
+            '''example''',
+            '''sample''',
+            '''placeholder''',
+            '''dummy''',
+            '''test''',
+            '''fake'''
+        ]
+
+# JWT tokens
+[[rules]]
+    id = "jwt-token"
+    description = "JWT Token"
+    regex = '''eyJ[A-Za-z0-9_-]*\.eyJ[A-Za-z0-9_-]*\.[A-Za-z0-9_-]*'''
+    tags = ["jwt", "token"]
+
+# Base64 encoded secrets
+[[rules]]
+    id = "base64-encoded-secret-actual"
+    description = "Base64 encoded secret - actual value"
+    regex = '''(?:secret|token|password|key|credential)s?['":\s]+([A-Za-z0-9+/]{64,}={0,2})''' # Ensure it's a long base64 string
+    secretGroup = 1
+    tags = ["base64", "encoded"]
+    [rules.allowlist]
+        regexes = [
+            '''example''',
+            '''sample''',
+            '''placeholder''',
+            '''dummy''',
+            '''test''',
+            '''fake'''
+        ]
+
+# AWS secrets
+[[rules]]
+    id = "aws-access-key"
+    description = "AWS Access Key"
+    regex = '''AKIA[0-9A-Z]{16}'''
+    tags = ["aws", "key"]
+
+[[rules]]
+    id = "aws-secret-key"
+    description = "AWS Secret Key"
+    regex = '''(?i)aws.{0,20}secret.{0,20}['":\s]*([A-Za-z0-9+/]{40})'''
+    secretGroup = 1
+    tags = ["aws", "secret"]
+
+# GitHub tokens
+[[rules]]
+    id = "github-token"
+    description = "GitHub Token"
+    regex = '''ghp_[A-Za-z0-9]{36}'''
+    tags = ["github", "token"]
+
+# Slack tokens
+[[rules]]
+    id = "slack-token"
+    description = "Slack Token"
+    regex = '''xox[baprs]-[A-Za-z0-9-]{10,}'''
+    tags = ["slack", "token"]
+
+# Global allowlist 
+[allowlist]
+    description = "Global allowlist for common false positives"
+    paths = [
+        '''(.*?)(package-lock\.json|yarn\.lock|pnpm-lock\.yaml)''', # Lockfiles
+        '''(.*?)(go\.sum)''',                                    
+        '''(.*?)(node_modules/.*)''',                            
+        '''(.*?)(\.git/.*)''',                                   
+        '''(.*?)README\.md''',                                   
+        '''(.*?)\.example\..*''',                                
+        '''(.*?)\.sample\.*''',                                 
+        '''(.*?)\.template\.*''',                               
+        '''(.*?)test.*''',                                       
+        '''(.*?)spec.*''',                                       
+        '''(.*?)\.test\..*''',                                   
+        '''(.*?)\.spec\..*''',                                   
+        '''(.*?)\.java'''                                        
+    ]
+    regexes = [
+        '''example''',
+        '''sample''',
+        '''test''',
+        '''fake''',
+        '''dummy''',
+        '''placeholder''',
+        '''template''',
+        '''# noqa''',                     
+        '''# nosec''',                    
+        '''# pragma: allowlist secret''',
+        '''# gitleaks:allow''',
+        '''your_.*''',                    
+        '''YOUR_.*''',                   
+        '''<.*>''',                       
+        '''\$\{[^}]+\}''',             
+        '''\$[A-Z_]+''',                  
+        '''logger\.''',                   
+        '''print\(''',
+        '''echo\s+''',
+        '''log\.''',
+        '''console\.''',
+        '''esc\(''',                      
+        '''escape\(''',
+        '''name:\s*action-registry''',    
+        '''postgresql\.credentials''',
+        '''\.acid\.zalan\.do''',
+        '''secretEnvVariables:''',
+        '''MY_DB_PASSWORD:''',
+        '''action-registry\.postgresql''',
+        '''getAvatarUploadToken''',       
+        '''organizationTokenService''',
+        '''createTwoFaType''',
+        '''tokenService''',
+        '''getPermissions''',
+        '''twoFaTokenService''',
+        '''passwordTokenService''',
+        '''getSessionId''',
+        '''authorizationTokenService''',
+        '''apiKeysTokenService''',
+        '''mobileApiKeysTokenService''',
+        '''clientCredentialsTokenService''',
+        '''clientSecret''',               
+        '''authorize\(''',
+        '''userTokenRedisTemplate''',
+        '''getUserMobileApiKeys''',
+        '''getEntityTokens''',
+        '''generate\(''',
+        '''generateToken''',
+        '''createToken''',
+        '''hasPermissions''',
+        '''validateTwoFa''',
+        '''validateActionLimits''',
+        '''hasTwoFaPermissions''',
+        '''isTwoFaRequired''',
+        '''entityMappedTokens''',
+        '''mappedTokens''',
+        '''auth-health-check''',
+        '''API_KEY_GET_TOKEN''',
+        '''qwertyuiopasdfghjklz'''       
+    ]

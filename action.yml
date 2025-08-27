@@ -1,0 +1,286 @@
+name: 'Git Security Scanner'
+description: 'Comprehensive security scanning for GitHub repositories using Gitleaks and Trivy to detect secrets, vulnerabilities, and misconfigurations with rich json/html reporting'
+author: 'CloudOn One'
+
+branding:
+  icon: 'shield'
+  color: 'red'
+
+inputs:
+  github_token:
+    description: 'GitHub token for API access'
+    required: false
+    default: ${{ github.token }}
+  
+  fail_on_critical:
+    description: 'Fail the build if critical security issues are found'
+    required: false
+    default: 'true'
+  
+  scan_type:
+    description: 'Type of scan to perform (all, gitleaks, trivy)'
+    required: false
+    default: 'all'
+  
+  repository_path:
+    description: 'Path to the repository to scan'
+    required: false
+    default: '.'
+  
+  upload_sarif:
+    description: 'Upload SARIF results to GitHub Security tab'
+    required: false
+    default: 'true'
+  
+  create_pr_comment:
+    description: 'Create a comment on pull requests with scan results'
+    required: false
+    default: 'true'
+  
+  scanner_version:
+    description: 'Version of the scanner image to use'
+    required: false
+    default: 'latest'
+
+outputs:
+  risk_level:
+    description: 'Overall risk level (CRITICAL, HIGH, MEDIUM, LOW, INFO)'
+    value: ${{ steps.scan.outputs.risk_level }}
+  
+  critical_count:
+    description: 'Number of critical security issues found'
+    value: ${{ steps.scan.outputs.critical_count }}
+  
+  high_count:
+    description: 'Number of high severity issues found'
+    value: ${{ steps.scan.outputs.high_count }}
+  
+  medium_count:
+    description: 'Number of medium severity issues found'
+    value: ${{ steps.scan.outputs.medium_count }}
+  
+  low_count:
+    description: 'Number of low severity issues found'
+    value: ${{ steps.scan.outputs.low_count }}
+  
+  secrets_found:
+    description: 'Number of secrets detected'
+    value: ${{ steps.scan.outputs.secrets_found }}
+  
+  vulnerabilities_found:
+    description: 'Number of vulnerabilities detected'
+    value: ${{ steps.scan.outputs.vulnerabilities_found }}
+  
+  misconfigurations_found:
+    description: 'Number of misconfigurations detected'
+    value: ${{ steps.scan.outputs.misconfigurations_found }}
+  
+  report_url:
+    description: 'URL to the detailed security report'
+    value: ${{ steps.scan.outputs.report_url }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup environment
+      shell: bash
+      run: |
+        echo "🔧 Setting up security scanner environment..."
+        
+        # Check if we're in a git repository
+        if [[ ! -d ".git" ]] && [[ "${{ inputs.repository_path }}" == "." ]]; then
+          echo "⚠️ Warning: Not in a git repository. Some features may be limited."
+        fi
+        
+        # Create working directories
+        mkdir -p /tmp/security-scan-results
+        chmod 777 /tmp/security-scan-results
+        
+        # Log environment info
+        echo "Repository: ${{ github.repository }}"
+        echo "Branch: ${{ github.ref }}"
+        echo "Event: ${{ github.event_name }}"
+    
+    - name: Login to GitHub Container Registry
+      shell: bash
+      run: |
+        echo "🔐 Logging into GitHub Container Registry..."
+        echo "${{ inputs.github_token }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
+    
+    - name: Determine scanner image
+      id: scanner-image
+      shell: bash
+      run: |
+        echo "🔍 Determining scanner image to use..."
+        
+        # Determine the appropriate Docker tag
+        if [[ "${{ github.event_name }}" == "pull_request" ]]; then
+          TAG="pr-${{ github.event.number }}"
+        elif [[ "${{ github.ref_name }}" == "main" ]]; then
+          TAG="${{ inputs.scanner_version }}"
+        else
+          # Sanitize branch name for Docker tag
+          TAG=$(echo "${{ github.ref_name }}" | sed 's/\//-/g')
+        fi
+        
+        PRIMARY_IMAGE="ghcr.io/cloudon-one/security-scanner:${TAG}"
+        FALLBACK_IMAGE="ghcr.io/cloudon-one/security-scanner:${{ inputs.scanner_version }}"
+        
+        echo "Primary image: ${PRIMARY_IMAGE}"
+        echo "Fallback image: ${FALLBACK_IMAGE}"
+        
+        # Try primary image first
+        if docker manifest inspect "${PRIMARY_IMAGE}" > /dev/null 2>&1; then
+          echo "✅ Using primary image: ${PRIMARY_IMAGE}"
+          echo "image=${PRIMARY_IMAGE}" >> $GITHUB_OUTPUT
+        else
+          echo "⚠️ Primary image not found, trying fallback..."
+          if docker manifest inspect "${FALLBACK_IMAGE}" > /dev/null 2>&1; then
+            echo "✅ Using fallback image: ${FALLBACK_IMAGE}"
+            echo "image=${FALLBACK_IMAGE}" >> $GITHUB_OUTPUT
+          else
+            echo "❌ No suitable scanner image found!"
+            echo "Please ensure the scanner image is built and pushed to the registry."
+            exit 1
+          fi
+        fi
+    
+    - name: Run security scan
+      id: scan
+      shell: bash
+      run: |
+        echo "🚀 Starting security scan..."
+        
+        # Determine scan path
+        SCAN_PATH="${{ github.workspace }}/${{ inputs.repository_path }}"
+        if [[ ! -d "$SCAN_PATH" ]]; then
+          echo "⚠️ Scan path does not exist: $SCAN_PATH"
+          echo "Using current directory instead..."
+          SCAN_PATH="${{ github.workspace }}"
+        fi
+        
+        echo "Scanning: $SCAN_PATH"
+        
+        # Run the scanner
+        docker run --rm \
+          -v "$SCAN_PATH":/scan_target:ro \
+          -v /tmp/security-scan-results:/reports \
+          -e GITHUB_ACTIONS=true \
+          -e FAIL_ON_CRITICAL=${{ inputs.fail_on_critical }} \
+          -e GITHUB_REPOSITORY="${{ github.repository }}" \
+          -e GITHUB_REF="${{ github.ref }}" \
+          -e GITHUB_SHA="${{ github.sha }}" \
+          -e GITHUB_TOKEN="${{ inputs.github_token }}" \
+          ${{ steps.scanner-image.outputs.image }} \
+          ${{ inputs.scan_type }} || SCAN_EXIT_CODE=$?
+        
+        # Check if scan completed (regardless of findings)
+        if [[ -f "/tmp/security-scan-results/json/final-security-report.json" ]]; then
+          echo "✅ Scan completed successfully"
+          REPORT="/tmp/security-scan-results/json/final-security-report.json"
+          
+          # Extract metrics with defaults
+          RISK_LEVEL=$(jq -r '.metadata.risk_level // "UNKNOWN"' "$REPORT" 2>/dev/null || echo "UNKNOWN")
+          CRITICAL=$(jq -r '.metadata.critical_issues // 0' "$REPORT" 2>/dev/null || echo "0")
+          HIGH=$(jq -r '.metadata.high_issues // 0' "$REPORT" 2>/dev/null || echo "0")
+          MEDIUM=$(jq -r '.metadata.medium_issues // 0' "$REPORT" 2>/dev/null || echo "0")
+          LOW=$(jq -r '.metadata.low_issues // 0' "$REPORT" 2>/dev/null || echo "0")
+          
+          # Try different paths for stats
+          SECRETS=$(jq -r '.executive_summary.quick_stats.gitleaks.secrets_found // .executive_summary.total_secrets // 0' "$REPORT" 2>/dev/null || echo "0")
+          VULNS=$(jq -r '.executive_summary.quick_stats["trivy-fs"].vulnerabilities // .executive_summary.total_vulnerabilities // 0' "$REPORT" 2>/dev/null || echo "0")
+          MISCONFIGS=$(jq -r '.executive_summary.quick_stats["trivy-fs"].misconfigurations // .executive_summary.total_misconfigurations // 0' "$REPORT" 2>/dev/null || echo "0")
+          
+          # Set outputs
+          echo "risk_level=${RISK_LEVEL}" >> $GITHUB_OUTPUT
+          echo "critical_count=${CRITICAL}" >> $GITHUB_OUTPUT
+          echo "high_count=${HIGH}" >> $GITHUB_OUTPUT
+          echo "medium_count=${MEDIUM}" >> $GITHUB_OUTPUT
+          echo "low_count=${LOW}" >> $GITHUB_OUTPUT
+          echo "secrets_found=${SECRETS}" >> $GITHUB_OUTPUT
+          echo "vulnerabilities_found=${VULNS}" >> $GITHUB_OUTPUT
+          echo "misconfigurations_found=${MISCONFIGS}" >> $GITHUB_OUTPUT
+          echo "report_url=${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> $GITHUB_OUTPUT
+          
+          # Display summary
+          echo ""
+          echo "## 📊 Security Scan Summary"
+          echo "================================"
+          echo "Risk Level: ${RISK_LEVEL}"
+          echo "Critical Issues: ${CRITICAL}"
+          echo "High Issues: ${HIGH}"
+          echo "Medium Issues: ${MEDIUM}"
+          echo "Low Issues: ${LOW}"
+          echo "Secrets Found: ${SECRETS}"
+          echo "Vulnerabilities: ${VULNS}"
+          echo "Misconfigurations: ${MISCONFIGS}"
+          echo "================================"
+          
+          # Copy summary for other steps
+          cp "$REPORT" /tmp/security-scan-results/summary.json 2>/dev/null || true
+          
+          # Determine if we should fail the build
+          if [[ "${{ inputs.fail_on_critical }}" == "true" ]] && [[ "${CRITICAL}" -gt 0 || "${SECRETS}" -gt 0 ]]; then
+            echo ""
+            echo "❌ Critical security issues detected!"
+            echo "Please fix the critical issues and secrets before proceeding."
+            exit 1
+          fi
+        else
+          echo "⚠️ No security report generated. Setting default values..."
+          echo "risk_level=UNKNOWN" >> $GITHUB_OUTPUT
+          echo "critical_count=0" >> $GITHUB_OUTPUT
+          echo "high_count=0" >> $GITHUB_OUTPUT
+          echo "medium_count=0" >> $GITHUB_OUTPUT
+          echo "low_count=0" >> $GITHUB_OUTPUT
+          echo "secrets_found=0" >> $GITHUB_OUTPUT
+          echo "vulnerabilities_found=0" >> $GITHUB_OUTPUT
+          echo "misconfigurations_found=0" >> $GITHUB_OUTPUT
+          echo "report_url=${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}" >> $GITHUB_OUTPUT
+          
+          # Exit with the original scan exit code if it failed
+          if [[ -n "$SCAN_EXIT_CODE" ]] && [[ "$SCAN_EXIT_CODE" -ne 0 ]]; then
+            echo "Scanner exited with code: $SCAN_EXIT_CODE"
+            exit $SCAN_EXIT_CODE
+          fi
+        fi
+    
+    - name: Upload scan artifacts
+      if: always()
+      shell: bash
+      run: |
+        echo "📤 Preparing scan artifacts..."
+        
+        # Check if artifacts exist
+        if [[ -d "/tmp/security-scan-results" ]] && [[ -n "$(ls -A /tmp/security-scan-results 2>/dev/null)" ]]; then
+          echo "Found scan results to upload"
+          
+          # Create artifact info file
+          cat > /tmp/security-scan-results/scan-info.txt << EOF
+        Scan Date: $(date)
+        Repository: ${{ github.repository }}
+        Branch: ${{ github.ref }}
+        Commit: ${{ github.sha }}
+        Event: ${{ github.event_name }}
+        Runner: ${{ runner.os }}
+        EOF
+          
+          echo "✅ Artifacts prepared for upload"
+          echo "Note: Artifacts will be uploaded by the workflow using actions/upload-artifact"
+        else
+          echo "⚠️ No scan results found to upload"
+        fi
+    
+    - name: Prepare PR comment data
+      if: github.event_name == 'pull_request' && inputs.create_pr_comment == 'true' && always()
+      shell: bash
+      run: |
+        echo "💬 Preparing PR comment data..."
+        
+        # Create comment data file for the workflow to use
+        if [[ -f "/tmp/security-scan-results/summary.json" ]]; then
+          cp /tmp/security-scan-results/summary.json /tmp/pr-comment-data.json
+          echo "✅ PR comment data prepared"
+        else
+          echo "⚠️ No summary data available for PR comment"
+        fi

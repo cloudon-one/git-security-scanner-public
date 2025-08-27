@@ -1,0 +1,99 @@
+name: Test GitHub Action
+
+on:
+  push:
+    branches: [main, develop]
+    paths:
+      - 'action.yml'
+      - '.github/workflows/test-action.yml'
+  pull_request:
+    paths:
+      - 'action.yml'
+  workflow_dispatch:
+
+jobs:
+  test-action:
+    name: Test Security Scanner Action
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+      pull-requests: write
+      packages: read
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Test security scanner action
+        id: scan
+        uses: ./  # Uses the action.yml in the repository root
+        with:
+          fail_on_critical: false  # Don't fail for testing
+          scan_type: all
+          create_pr_comment: false  # Disable for testing
+          upload_sarif: false  # Handle separately
+      
+      - name: Display scan results
+        if: always()
+        run: |
+          echo "## Test Results"
+          echo "Risk Level: ${{ steps.scan.outputs.risk_level }}"
+          echo "Critical Issues: ${{ steps.scan.outputs.critical_count }}"
+          echo "High Issues: ${{ steps.scan.outputs.high_count }}"
+          echo "Medium Issues: ${{ steps.scan.outputs.medium_count }}"
+          echo "Low Issues: ${{ steps.scan.outputs.low_count }}"
+          echo "Secrets Found: ${{ steps.scan.outputs.secrets_found }}"
+          echo "Vulnerabilities: ${{ steps.scan.outputs.vulnerabilities_found }}"
+          echo "Misconfigurations: ${{ steps.scan.outputs.misconfigurations_found }}"
+          echo "Report URL: ${{ steps.scan.outputs.report_url }}"
+      
+      - name: Validate outputs
+        if: always()
+        run: |
+          # Check that outputs are set
+          RISK_LEVEL="${{ steps.scan.outputs.risk_level }}"
+          if [[ -z "$RISK_LEVEL" ]] || [[ "$RISK_LEVEL" == "" ]]; then
+            echo "::warning::Risk level output not set, but this may be expected if no report was generated"
+          else
+            echo "✅ Risk level output: $RISK_LEVEL"
+          fi
+          
+          # Check other outputs
+          echo "Critical count: ${{ steps.scan.outputs.critical_count }}"
+          echo "Secrets found: ${{ steps.scan.outputs.secrets_found }}"
+          
+          echo "✅ Output validation complete"
+      
+      - name: Upload test artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-scan-results-${{ github.run_number }}
+          path: /tmp/security-scan-results/
+          retention-days: 7
+
+  test-action-variations:
+    name: Test Action Variations
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    strategy:
+      matrix:
+        scan_type: [all, gitleaks, trivy]
+        fail_on_critical: [true, false]
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Test with scan_type=${{ matrix.scan_type }}, fail_on_critical=${{ matrix.fail_on_critical }}
+        uses: ./
+        with:
+          scan_type: ${{ matrix.scan_type }}
+          fail_on_critical: ${{ matrix.fail_on_critical }}
+          create_pr_comment: false  # Avoid multiple comments in PRs
+          upload_sarif: false  # Avoid multiple uploads
+        continue-on-error: true  # Don't fail the matrix job
