@@ -58,8 +58,8 @@ jobs:
             TAG=$(echo "${{ github.ref_name }}" | sed 's/\//-/g')
           fi
           
-          PRIMARY_IMAGE="ghcr.io/${{ github.repository_owner }}/security-scanner:${TAG}"
-          FALLBACK_IMAGE="ghcr.io/${{ github.repository_owner }}/security-scanner:latest"
+          PRIMARY_IMAGE="ghcr.io/${{ github.repository_owner }}/git-security-scanner:${TAG}"
+          FALLBACK_IMAGE="ghcr.io/${{ github.repository_owner }}/git-security-scanner:latest"
           
           echo "Checking if primary scanner image is available: ${PRIMARY_IMAGE}"
           
@@ -121,7 +121,7 @@ jobs:
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: /tmp/scan-results/*.sarif
-          category: 'security-scanner'
+          category: 'git-security-scanner'
         continue-on-error: true
 
       - name: Upload scan artifacts
