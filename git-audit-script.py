@@ -27,7 +27,6 @@ SCAN_ALL_REPOS = os.environ.get('SCAN_ALL_REPOS', 'false').lower() == 'true'
 SCAN_ORG_REPOS = os.environ.get('SCAN_ORG_REPOS', 'false').lower() == 'true'
 MAX_REPOS = int(os.environ.get('MAX_REPOS', '50'))
 GITHUB_API_BASE_URL = "https://api.github.com"
-# Slack configuration removed - no longer used
 REPO_PATH_FROM_ARGS = None
 
 class CleanFormatter(logging.Formatter):
@@ -128,8 +127,6 @@ def get_paginated_results(endpoint: str, params: Optional[Dict] = None, max_page
                 all_results.extend(results)
             else:
                 all_results.append(results)
-            
-            # Check for next page
             if 'next' in response.links:
                 next_url = response.links['next']['url']
                 page += 1
@@ -248,7 +245,6 @@ def run_trivy_fs_scan(repo_path: str, output_path: str) -> int:
                     logger.warning("Trivy filesystem report is not valid JSON")
         else:
             logger.info("Trivy filesystem scan complete. No vulnerabilities found.")
-            # Create empty report
             with open(report_file, 'w') as f:
                 json.dump({"Results": []}, f)
         
@@ -295,7 +291,6 @@ def run_trivy_config_scan(repo_path: str, output_path: str) -> int:
                     logger.warning("Trivy configuration report is not valid JSON")
         else:
             logger.info("Trivy configuration scan complete. No misconfigurations found.")
-            # Create empty report
             with open(report_file, 'w') as f:
                 json.dump({"Results": []}, f)
         
@@ -350,7 +345,6 @@ def generate_dynamic_recommendations(detailed_reports: Dict) -> Dict:
             if high_vulns > 0:
                 recommendations["high"].append(f"🔴 HIGH: {high_vulns} high severity vulnerabilities detected. Plan updates within 30 days.")
     
-    # Trivy configuration recommendations
     if "trivy-config" in detailed_reports:
         trivy_config_data = detailed_reports["trivy-config"]
         if isinstance(trivy_config_data, dict) and "Results" in trivy_config_data:
@@ -358,7 +352,6 @@ def generate_dynamic_recommendations(detailed_reports: Dict) -> Dict:
             if misconfigs > 0:
                 recommendations["high"].append(f"🔴 HIGH: {misconfigs} security misconfigurations detected. Review and fix configuration issues.")
     
-    # General recommendations
     if not any(recommendations.values()):
         recommendations["info"].append("✅ No security issues detected. Continue monitoring and maintain security best practices.")
     
@@ -380,13 +373,9 @@ def generate_combined_report(owner: str, repo_slug: str, scan_results_summary: D
         actual_owner = owner or 'unknown-owner'
     if not actual_repo_slug:
         actual_repo_slug = repo_slug or 'unknown-repo'
-    
-    # Handle local scan scenarios
     if actual_owner == 'local_scan' or actual_repo_slug == 'scan_target':
         actual_owner = 'local-scan'
         actual_repo_slug = 'local-repository'
-    
-    # Extract owner from full repository name if available
     if repo_full_name and '/' in repo_full_name:
         parts = repo_full_name.split('/')
         if len(parts) >= 2:
@@ -397,24 +386,18 @@ def generate_combined_report(owner: str, repo_slug: str, scan_results_summary: D
     
     logger.info(f"Report metadata - Owner: {actual_owner}, Repo: {actual_repo_slug}, Branch: {actual_branch}")
     
-    # Calculate totals
     gitleaks_findings = scan_results_summary.get("gitleaks", {}).get("findings_count", 0)
     trivy_vulnerabilities = scan_results_summary.get("trivy-fs", {}).get("vulnerabilities_count", 0)
     trivy_misconfigurations = scan_results_summary.get("trivy-fs", {}).get("misconfigurations_count", 0)
     total_issues = gitleaks_findings + trivy_vulnerabilities + trivy_misconfigurations
     
-    # Determine risk levels
     secret_risk = "CRITICAL" if gitleaks_findings > 0 else "LOW"
     vuln_risk = "CRITICAL" if trivy_vulnerabilities > 10 else "HIGH" if trivy_vulnerabilities > 5 else "MEDIUM" if trivy_vulnerabilities > 0 else "LOW"
     config_risk = "HIGH" if trivy_misconfigurations > 5 else "MEDIUM" if trivy_misconfigurations > 0 else "LOW"
-    # SAST risk removed - Semgrep no longer supported
-    
     overall_risk = "CRITICAL" if gitleaks_findings > 0 or total_issues > 25 else \
                    "HIGH" if total_issues > 15 else \
                    "MEDIUM" if total_issues > 8 else \
                    "LOW" if total_issues > 0 else "INFO"
-    
-    # Build the report structure
     combined_report = {
         "metadata": {
             "scan_date": current_date,
@@ -457,13 +440,10 @@ def generate_combined_report(owner: str, repo_slug: str, scan_results_summary: D
         }
     }
     
-    # Add description based on findings
     if total_issues > 0:
         combined_report["executive_summary"]["description"] = f"Security scan completed for {actual_owner}/{actual_repo_slug}. Total issues found: {total_issues}. Overall risk level: {overall_risk}."
     else:
         combined_report["executive_summary"]["description"] = f"Security scan completed for {actual_owner}/{actual_repo_slug}. No issues found by automated scanners. Overall risk level: INFO."
-    
-    # Report URLs will be provided by the CI/CD pipeline artifacts
     return combined_report
 
 def convert_json_to_html(report_data: Dict) -> str:
@@ -671,9 +651,6 @@ def convert_json_to_html(report_data: Dict) -> str:
                 <h2>🔍 Detailed Findings</h2>
                 <div class="findings-section">
     """
-    
-    # Add detailed findings for each tool
-    # Add Gitleaks findings
     gitleaks_data = detailed_results.get("gitleaks", {})
     if gitleaks_data and (isinstance(gitleaks_data, list) and len(gitleaks_data) > 0):
         html_content += """
@@ -687,8 +664,6 @@ def convert_json_to_html(report_data: Dict) -> str:
                 line_number = finding.get("StartLine", "Unknown line")
                 rule_id = finding.get("RuleID", "Unknown rule")
                 secret = finding.get("Secret", "")
-                
-                # Mask the secret for security
                 masked_secret = secret[:4] + "*" * (len(secret) - 8) + secret[-4:] if len(secret) > 8 else "*" * len(secret)
                 
                 html_content += f"""
@@ -730,8 +705,6 @@ def convert_json_to_html(report_data: Dict) -> str:
         html_content += """
                     </div>
         """
-    
-    # Add Trivy vulnerability findings
     trivy_fs_data = detailed_results.get("trivy-fs", {})
     if trivy_fs_data and isinstance(trivy_fs_data, dict) and trivy_fs_data.get("Results"):
         html_content += """
@@ -790,8 +763,6 @@ def convert_json_to_html(report_data: Dict) -> str:
         html_content += """
                     </div>
         """
-    
-    # Add Trivy configuration findings (misconfigurations are in trivy-fs data)
     trivy_fs_data = detailed_results.get("trivy-fs", {})
     if trivy_fs_data and isinstance(trivy_fs_data, dict) and trivy_fs_data.get("Results"):
         html_content += """
@@ -810,8 +781,6 @@ def convert_json_to_html(report_data: Dict) -> str:
                         message = misconfig.get("Message", "No message available")
                         resolution = misconfig.get("Resolution", "No resolution provided")
                         print(f"🔧 PROCESSING {check_id}: Original resolution: '{resolution}'")
-                        
-                        # Check if resolution has any additional content
                         if "infrastructure-as-code" in resolution.lower():
                             print(f"🚨 FOUND GENERIC TEXT IN RESOLUTION: {resolution}")
                         else:
@@ -848,8 +817,6 @@ def convert_json_to_html(report_data: Dict) -> str:
         html_content += """
                     </div>
         """
-    
-    # If no detailed findings were found, show a message
     if not any([
         gitleaks_data and (isinstance(gitleaks_data, list) and len(gitleaks_data) > 0),
         trivy_fs_data and isinstance(trivy_fs_data, dict) and trivy_fs_data.get("Results")
@@ -860,8 +827,6 @@ def convert_json_to_html(report_data: Dict) -> str:
                         <p>All automated security scans completed without finding any issues.</p>
                     </div>
         """
-    
-    # Extract footer values
     print(f"🕒 FOOTER PROCESSING:")
     print(f"   - meta keys: {list(meta.keys())}")
     print(f"   - scan_date: '{meta.get('scan_date', 'N/A')}'")
@@ -870,8 +835,6 @@ def convert_json_to_html(report_data: Dict) -> str:
     footer_time = esc(meta.get('scan_time', 'N/A'))
     print(f"   - footer_date: '{footer_date}'")
     print(f"   - footer_time: '{footer_time}'")
-    
-    # Ensure proper footer generation with explicit variable substitution
     footer_html = f"""
                 </div>
             </div>
@@ -1045,8 +1008,6 @@ def convert_consolidated_report_to_html(consolidated_report: Dict) -> str:
                 <h2>💡 Recommendations</h2>
                 <div class="recommendations">
     """
-    
-    # Add recommendations by priority
     for priority in ["critical", "high", "medium", "low", "info"]:
         recs = recommendations.get(priority, [])
         if recs:
@@ -1077,8 +1038,6 @@ def convert_consolidated_report_to_html(consolidated_report: Dict) -> str:
                 
                 <div id="tab-risk" class="tab-content active">
     """
-    
-    # Top repositories by risk
     for repo in top_repos.get("by_overall_risk", [])[:10]:
         html_content += f"""
                     <div class="repo-card">
@@ -1882,8 +1841,6 @@ def scan_user_repositories(owner: str, repo_path_base_for_local: str, reports_di
                       "HIGH" if total_user_issues > 50 else \
                       "MEDIUM" if total_user_issues > 0 else "LOW"
     
-    # Slack notification removed
-    
     return {"success": True, "owner": owner, "repositories_scanned": len(aggregated_repo_summaries), "total_issues": total_user_issues}
 
 def process_scan_reports(gitleaks_report_path: str = None, trivy_report_path: str = None, osv_report_path: str = None) -> Dict:
@@ -2204,8 +2161,6 @@ def fail_pipeline_on_critical_findings(combined_report: Dict, exit_code: int = 1
         
         logger.error(f"Pipeline failed due to security issues: {total_issues} issues, Risk Level: {risk_level}")
         sys.exit(exit_code)
-
-# GCS upload functions removed - using CI/CD pipeline artifacts instead
 
 def main():
     """Main function to orchestrate the security scanning process"""
