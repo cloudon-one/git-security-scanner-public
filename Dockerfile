@@ -8,18 +8,22 @@ ARG PYTHON_VERSION=3.12
 # ============================================
 FROM alpine:${ALPINE_VERSION} AS downloader
 
-# Tool versions (can be overridden at build time)
-# Tool versions (can be overridden at build time)
 ARG GITLEAKS_VERSION=v8.28.0
 ARG TRIVY_VERSION=v0.65.0
 ARG OSV_SCANNER_VERSION=v2.2.1
 ARG HELM_VERSION=v3.18.6
 
-# Checksums for verification (must match versions above)
-ARG GITLEAKS_SHA256=cdbb7c955abce02001a9f6c9f602fb195b7fadc1e812065883f695d1eeaba854
-ARG TRIVY_SHA256=f0c5e3c912e7f5194a0efc85dfd34c94c63c4a4184b2d7b97ec7718661f5ead2
-ARG OSV_SCANNER_SHA256=e774e5770c31d60745c067be5f69bf3b46641b6d0e0ed87fd65e569cda35dc50
-ARG HELM_SHA256=78b4a2c0a9e7f8e3f2d1b0c9a8e7f6e5d4c3b2a10f9e8d7c6b5a4a3b2c1d0e9f
+ARG GITLEAKS_SHA256_AMD64=a65b5253807a68ac0cafa4414031fd740aeb55f54fb7e55f386acb52e6a840eb
+ARG GITLEAKS_SHA256_ARM64=eff65261156100e5d94a6b3dec313d532fddfe19ae1590bf7a2b4f2699128356
+
+ARG TRIVY_SHA256_AMD64=f0c5e3c912e7f5194a0efc85dfd34c94c63c4a4184b2d7b97ec7718661f5ead2
+ARG TRIVY_SHA256_ARM64=013c67e6aff35429cbbc9f38ea030f5a929d128df08f16188af35ca70517330b
+
+ARG OSV_SCANNER_SHA256_AMD64=59e3bbd49f964265efc495b7ff896bff3c725b14c9fcce2e82088e053af98e7b
+ARG OSV_SCANNER_SHA256_ARM64=cd62c3f13d73fe454ba0518e9c738fdedc8e5e37203bdb4f6b7eaefc7d137878
+
+ARG HELM_SHA256_AMD64=3f43c0aa57243852dd542493a0f54f1396c0bc8ec7296bbb2c01e802010819ce
+ARG HELM_SHA256_ARM64=5b8e00b6709caab466cbbb0bc29ee09059b8dc9417991dd04b497530e49b1737
 
 # Install download dependencies
 RUN apk add --no-cache \
@@ -31,34 +35,37 @@ RUN apk add --no-cache \
 
 WORKDIR /downloads
 
-# Download and verify Gitleaks
 RUN ARCH=$(uname -m | sed 's/x86_64/x64/; s/aarch64/arm64/') && \
+    if [ "$(uname -m)" = "x86_64" ]; then CHECKSUM=${GITLEAKS_SHA256_AMD64}; else CHECKSUM=${GITLEAKS_SHA256_ARM64}; fi && \
     curl -sSfL "https://github.com/gitleaks/gitleaks/releases/download/${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION:1}_linux_${ARCH}.tar.gz" \
     -o gitleaks.tar.gz && \
-    echo "${GITLEAKS_SHA256}  gitleaks.tar.gz" | sha256sum -c - && \
+    echo "${CHECKSUM}  gitleaks.tar.gz" | sha256sum -c - && \
     tar -xzf gitleaks.tar.gz gitleaks && \
     chmod +x gitleaks
 
 # Download and verify Trivy
 RUN ARCH=$(uname -m | sed 's/x86_64/64bit/; s/aarch64/ARM64/') && \
+    if [ "$(uname -m)" = "x86_64" ]; then CHECKSUM=${TRIVY_SHA256_AMD64}; else CHECKSUM=${TRIVY_SHA256_ARM64}; fi && \
     curl -sSfL "https://github.com/aquasecurity/trivy/releases/download/${TRIVY_VERSION}/trivy_${TRIVY_VERSION:1}_Linux-${ARCH}.tar.gz" \
     -o trivy.tar.gz && \
-    echo "${TRIVY_SHA256}  trivy.tar.gz" | sha256sum -c - && \
+    echo "${CHECKSUM}  trivy.tar.gz" | sha256sum -c - && \
     tar -xzf trivy.tar.gz trivy && \
     chmod +x trivy
 
 # Download and verify OSV-Scanner
 RUN ARCH=$(uname -m | sed 's/x86_64/amd64/; s/aarch64/arm64/') && \
+    if [ "$(uname -m)" = "x86_64" ]; then CHECKSUM=${OSV_SCANNER_SHA256_AMD64}; else CHECKSUM=${OSV_SCANNER_SHA256_ARM64}; fi && \
     curl -sSfL "https://github.com/google/osv-scanner/releases/download/${OSV_SCANNER_VERSION}/osv-scanner_linux_${ARCH}" \
     -o osv-scanner && \
-    echo "${OSV_SCANNER_SHA256}  osv-scanner" | sha256sum -c - && \
+    echo "${CHECKSUM}  osv-scanner" | sha256sum -c - && \
     chmod +x osv-scanner
 
 # Download and verify Helm (for Kubernetes manifest scanning)
 RUN ARCH=$(uname -m | sed 's/x86_64/amd64/; s/aarch64/arm64/') && \
+    if [ "$(uname -m)" = "x86_64" ]; then CHECKSUM=${HELM_SHA256_AMD64}; else CHECKSUM=${HELM_SHA256_ARM64}; fi && \
     curl -sSfL "https://get.helm.sh/helm-${HELM_VERSION}-linux-${ARCH}.tar.gz" \
     -o helm.tar.gz && \
-    echo "${HELM_SHA256}  helm.tar.gz" | sha256sum -c - && \
+    echo "${CHECKSUM}  helm.tar.gz" | sha256sum -c - && \
     tar -xzf helm.tar.gz linux-${ARCH}/helm && \
     mv linux-${ARCH}/helm helm && \
     chmod +x helm

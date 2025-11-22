@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### 🔒 Security Improvements
 
 - **Supply Chain Security**: Added SHA256 checksum verification for all downloaded security tools (Gitleaks, Trivy, OSV-Scanner, Helm) in the Dockerfile. This ensures that the binaries are authentic and have not been tampered with.
+- **Bug Fixes**: Fixed Docker build errors by adding correct multi-arch checksums for all security tools.
 
 ### 🛠️ Maintenance & Code Quality
 
