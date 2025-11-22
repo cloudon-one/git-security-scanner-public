@@ -1,7 +1,7 @@
 # Git Security Scanner - GitHub Action
 
 [![GitHub Marketplace](https://img.shields.io/badge/Marketplace-Git%20Security%20Scanner-blue?logo=github)](https://github.com/marketplace/actions/git-security-scanner)
-[![Release](https://img.shields.io/badge/Release-v1.1.1-green)](https://github.com/cloudon-one/git-security-scanner-public/releases/tag/v.1.1.1)
+[![Release](https://img.shields.io/badge/Release-v2.0.0-green)](https://github.com/cloudon-one/git-security-scanner-public/releases/tag/v2.0.0)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Docker](https://img.shields.io/badge/Docker-ghcr.io-blue?logo=docker)](https://ghcr.io/cloudon-one/security-scanner)
 
@@ -35,7 +35,7 @@ jobs:
       - uses: actions/checkout@v4
       
       - name: Run Security Scan
-        uses: cloudon-one/git-security-scanner@v1.1.1
+        uses: cloudon-one/git-security-scanner@v2
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           fail_on_critical: true
@@ -74,7 +74,7 @@ jobs:
 ### Basic Security Check
 
 ```yaml
-- uses: cloudon-one/git-security-scanner@v1.1.1
+- uses: cloudon-one/git-security-scanner@v2
   with:
     fail_on_critical: true
     create_pr_comment: true
@@ -83,7 +83,7 @@ jobs:
 ### Advanced Configuration
 
 ```yaml
-- uses: cloudon-one/git-security-scanner@v1.1.1
+- uses: cloudon-one/git-security-scanner@v2
   id: security
   with:
     scan_type: all
@@ -110,7 +110,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: cloudon-one/git-security-scanner@v1.1.1
+      - uses: cloudon-one/git-security-scanner@v2
         with:
           fail_on_critical: false
 ```
@@ -118,6 +118,7 @@ jobs:
 ## Building from Source
 
 ### Prerequisites
+
 - Docker
 - GitHub Token (for GitHub API access)
 
@@ -148,6 +149,7 @@ docker run --rm \
 ## Architecture
 
 The scanner consists of:
+
 - `action.yml` - GitHub Action definition
 - `Dockerfile` - Container with security tools
 - `git-audit-script.py` - Main orchestration script

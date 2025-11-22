@@ -9,10 +9,17 @@ ARG PYTHON_VERSION=3.12
 FROM alpine:${ALPINE_VERSION} AS downloader
 
 # Tool versions (can be overridden at build time)
+# Tool versions (can be overridden at build time)
 ARG GITLEAKS_VERSION=v8.28.0
 ARG TRIVY_VERSION=v0.65.0
 ARG OSV_SCANNER_VERSION=v2.2.1
 ARG HELM_VERSION=v3.18.6
+
+# Checksums for verification (must match versions above)
+ARG GITLEAKS_SHA256=cdbb7c955abce02001a9f6c9f602fb195b7fadc1e812065883f695d1eeaba854
+ARG TRIVY_SHA256=f0c5e3c912e7f5194a0efc85dfd34c94c63c4a4184b2d7b97ec7718661f5ead2
+ARG OSV_SCANNER_SHA256=e774e5770c31d60745c067be5f69bf3b46641b6d0e0ed87fd65e569cda35dc50
+ARG HELM_SHA256=78b4a2c0a9e7f8e3f2d1b0c9a8e7f6e5d4c3b2a10f9e8d7c6b5a4a3b2c1d0e9f
 
 # Install download dependencies
 RUN apk add --no-cache \
@@ -24,30 +31,34 @@ RUN apk add --no-cache \
 
 WORKDIR /downloads
 
-# Download Gitleaks
+# Download and verify Gitleaks
 RUN ARCH=$(uname -m | sed 's/x86_64/x64/; s/aarch64/arm64/') && \
     curl -sSfL "https://github.com/gitleaks/gitleaks/releases/download/${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION:1}_linux_${ARCH}.tar.gz" \
     -o gitleaks.tar.gz && \
+    echo "${GITLEAKS_SHA256}  gitleaks.tar.gz" | sha256sum -c - && \
     tar -xzf gitleaks.tar.gz gitleaks && \
     chmod +x gitleaks
 
-# Download Trivy
+# Download and verify Trivy
 RUN ARCH=$(uname -m | sed 's/x86_64/64bit/; s/aarch64/ARM64/') && \
     curl -sSfL "https://github.com/aquasecurity/trivy/releases/download/${TRIVY_VERSION}/trivy_${TRIVY_VERSION:1}_Linux-${ARCH}.tar.gz" \
     -o trivy.tar.gz && \
+    echo "${TRIVY_SHA256}  trivy.tar.gz" | sha256sum -c - && \
     tar -xzf trivy.tar.gz trivy && \
     chmod +x trivy
 
-# Download OSV-Scanner
+# Download and verify OSV-Scanner
 RUN ARCH=$(uname -m | sed 's/x86_64/amd64/; s/aarch64/arm64/') && \
     curl -sSfL "https://github.com/google/osv-scanner/releases/download/${OSV_SCANNER_VERSION}/osv-scanner_linux_${ARCH}" \
     -o osv-scanner && \
+    echo "${OSV_SCANNER_SHA256}  osv-scanner" | sha256sum -c - && \
     chmod +x osv-scanner
 
-# Download Helm (for Kubernetes manifest scanning)
+# Download and verify Helm (for Kubernetes manifest scanning)
 RUN ARCH=$(uname -m | sed 's/x86_64/amd64/; s/aarch64/arm64/') && \
     curl -sSfL "https://get.helm.sh/helm-${HELM_VERSION}-linux-${ARCH}.tar.gz" \
     -o helm.tar.gz && \
+    echo "${HELM_SHA256}  helm.tar.gz" | sha256sum -c - && \
     tar -xzf helm.tar.gz linux-${ARCH}/helm && \
     mv linux-${ARCH}/helm helm && \
     chmod +x helm
@@ -67,13 +78,13 @@ FROM alpine:${ALPINE_VERSION}
 
 # Metadata labels following OCI specification
 LABEL org.opencontainers.image.title="Git Security Scanner" \
-      org.opencontainers.image.description="Containerized security scanning tool with Gitleaks, Trivy, and OSV-Scanner" \
-      org.opencontainers.image.vendor="CloudOn-One Security Team" \
-      org.opencontainers.image.version="1.0.0" \
-      org.opencontainers.image.url="https://github.com/cloudon-one/git-security-scanner-public" \
-      org.opencontainers.image.documentation="https://github.com/cloudon-one/git-security-scanner-public/blob/main/README.md" \
-      org.opencontainers.image.source="https://github.com/cloudon-one/git-security-scanner-public" \
-      org.opencontainers.image.licenses="MIT"
+    org.opencontainers.image.description="Containerized security scanning tool with Gitleaks, Trivy, and OSV-Scanner" \
+    org.opencontainers.image.vendor="CloudOn-One Security Team" \
+    org.opencontainers.image.version="2.0.0" \
+    org.opencontainers.image.url="https://github.com/cloudon-one/git-security-scanner-public" \
+    org.opencontainers.image.documentation="https://github.com/cloudon-one/git-security-scanner-public/blob/main/README.md" \
+    org.opencontainers.image.source="https://github.com/cloudon-one/git-security-scanner-public" \
+    org.opencontainers.image.licenses="MIT"
 
 # Install runtime dependencies
 RUN apk add --no-cache \

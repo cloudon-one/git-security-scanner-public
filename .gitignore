@@ -67,3 +67,4 @@ out/
 /security-scan-results/
 .claude/settings.local.json
 MARKETPLACE_PUBLISHING.md
+__pycache__

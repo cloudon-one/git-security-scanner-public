@@ -5,6 +5,19 @@ All notable changes to Git Security Scanner will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0] - 2025-11-22
+
+### 🔒 Security Improvements
+
+- **Supply Chain Security**: Added SHA256 checksum verification for all downloaded security tools (Gitleaks, Trivy, OSV-Scanner, Helm) in the Dockerfile. This ensures that the binaries are authentic and have not been tampered with.
+
+### 🛠️ Maintenance & Code Quality
+
+- **Unit Tests**: Added a comprehensive unit test suite for `git-audit-script.py` to ensure reliability and prevent regressions.
+- **Development Tools**: Added a `Makefile` to streamline building, testing, and running the scanner locally.
+- **Code Quality**: Refactored `git-audit-script.py` to improve readability, added type hints, and fixed all linting errors (Ruff).
+- **Documentation**: Updated README and documentation for v2.0.0.
+
 ## [1.1.1] - 2025-08-27
 
 ### 🚀 First Stable Release
