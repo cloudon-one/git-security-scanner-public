@@ -1,7 +1,7 @@
 # Git Security Scanner - GitHub Action
 
 [![GitHub Marketplace](https://img.shields.io/badge/Marketplace-Git%20Security%20Scanner-blue?logo=github)](https://github.com/marketplace/actions/git-security-scanner)
-[![Release](https://img.shields.io/github/v/release/cloudon-one/git-security-scanner-public)](https://github.com/cloudon-one/git-security-scanner-public/releases/tag/v3)
+[![Release](https://img.shields.io/github/v/release/cloudon-one/git-security-scanner-public)](https://github.com/cloudon-one/git-security-scanner-public/releases/tag/v2.1)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Docker](https://img.shields.io/badge/Docker-ghcr.io-blue?logo=docker)](https://github.com/cloudon-one/git-security-scanner-public/pkgs/container/git-security-scanner)
 
@@ -41,7 +41,7 @@ jobs:
           fetch-depth: 0
 
       - name: Run Security Scan
-        uses: cloudon-one/git-security-scanner-public@v3
+        uses: cloudon-one/git-security-scanner-public@v2.1
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           fail_on_critical: true
@@ -90,7 +90,7 @@ jobs:
 ### Basic Security Check
 
 ```yaml
-- uses: cloudon-one/git-security-scanner-public@v3
+- uses: cloudon-one/git-security-scanner-public@v2.1
   with:
     fail_on_critical: true
     create_pr_comment: true
@@ -99,7 +99,7 @@ jobs:
 ### Advanced Configuration with Result Processing
 
 ```yaml
-- uses: cloudon-one/git-security-scanner-public@v3
+- uses: cloudon-one/git-security-scanner-public@v2.1
   id: security
   with:
     scan_type: all
@@ -136,7 +136,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: cloudon-one/git-security-scanner-public@v3
+      - uses: cloudon-one/git-security-scanner-public@v2.1
         with:
           fail_on_critical: false
 ```
@@ -144,7 +144,7 @@ jobs:
 ### Gitleaks-Only Scan (Secrets Detection)
 
 ```yaml
-- uses: cloudon-one/git-security-scanner-public@v3
+- uses: cloudon-one/git-security-scanner-public@v2.1
   with:
     scan_type: gitleaks
     fail_on_critical: true
@@ -153,7 +153,7 @@ jobs:
 ### Trivy-Only Scan (Vulnerabilities and Misconfigurations)
 
 ```yaml
-- uses: cloudon-one/git-security-scanner-public@v3
+- uses: cloudon-one/git-security-scanner-public@v2.1
   with:
     scan_type: trivy
     fail_on_critical: false
@@ -203,7 +203,7 @@ git-security-scanner-public/
     └── repository-security-scan.yml # Self-scan workflow
 ```
 
-## Security Tools (v3)
+## Security Tools (v2.1)
 
 | Tool | Version | Purpose |
 |------|---------|---------|
@@ -216,7 +216,7 @@ git-security-scanner-public/
 
 ## Changelog
 
-### v3 (2026-04-08)
+### v2.1 (2026-04-08)
 
 - Updated Gitleaks v8.28.0 → v8.30.1
 - Updated Trivy v0.65.0 → v0.69.3
