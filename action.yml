@@ -40,7 +40,7 @@ inputs:
   scanner_version:
     description: 'Version of the scanner image to use'
     required: false
-    default: 'latest'
+    default: 'v2.1.0'
 
 outputs:
   risk_level:

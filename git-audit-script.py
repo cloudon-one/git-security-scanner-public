@@ -919,14 +919,6 @@ def convert_json_to_html(report_data: Dict[str, Any]) -> str:
                         resolution = misconfig.get(
                             "Resolution", "No resolution provided"
                         )
-                        print(
-                            f"🔧 PROCESSING {check_id}: Original resolution: '{resolution}'"
-                        )
-                        if "infrastructure-as-code" in resolution.lower():
-                            print(f"🚨 FOUND GENERIC TEXT IN RESOLUTION: {resolution}")
-                        else:
-                            print(f"✅ RESOLUTION IS CLEAN: {resolution}")
-
                         html_content += f"""
                         <div class="finding-item">
                             <div class="finding-header">
@@ -973,14 +965,8 @@ def convert_json_to_html(report_data: Dict[str, Any]) -> str:
                         <p>All automated security scans completed without finding any issues.</p>
                     </div>
         """
-    print("🕒 FOOTER PROCESSING:")
-    print(f"   - meta keys: {list(meta.keys())}")
-    print(f"   - scan_date: '{meta.get('scan_date', 'N/A')}'")
-    print(f"   - scan_time: '{meta.get('scan_time', 'N/A')}'")
     footer_date = esc(meta.get("scan_date", "N/A"))
     footer_time = esc(meta.get("scan_time", "N/A"))
-    print(f"   - footer_date: '{footer_date}'")
-    print(f"   - footer_time: '{footer_time}'")
     footer_html = f"""
                 </div>
             </div>
@@ -1526,7 +1512,6 @@ def scan_single_repository(
     Returns:
         Dict containing scan results and metadata
     """
-    print(f"🎯 FUNCTION ENTRY: scan_single_repository({owner}, {repo_slug})")
     logger.info(f"Starting scan for repository: {owner}/{repo_slug}")
 
     current_time_obj = get_current_utc_time()
@@ -1810,18 +1795,11 @@ def scan_single_repository(
         json.dump(final_combined_report_data, f, indent=2)
 
     # Generate and save HTML report
-    print("🔥 ABOUT TO CALL convert_json_to_html function")
     html_content = convert_json_to_html(final_combined_report_data)
-    print(f"🔥 HTML CONTENT LENGTH: {len(html_content)} characters")
-    print(
-        f"🔥 HTML CONTENT CONTAINS 'infrastructure-as-code': {'infrastructure-as-code' in html_content}"
-    )
-    print(f"🔥 HTML CONTENT FOOTER EXCERPT: {html_content[-200:]}")
     combined_report_html_path = os.path.join(html_dir, "final-security-report.html")
     safe_remove_if_exists(combined_report_html_path)
     with open(combined_report_html_path, "w", encoding="utf-8") as f:
         f.write(html_content)
-    print(f"🔥 HTML REPORT WRITTEN TO: {combined_report_html_path}")
 
     # Reports are saved locally and will be uploaded as CI/CD pipeline artifacts
 
@@ -2643,7 +2621,6 @@ def fail_pipeline_on_critical_findings(
 
 def main():
     """Main function to orchestrate the security scanning process"""
-    print("🚀 SCRIPT STARTED: git-audit-script.py main() function")
     parser = argparse.ArgumentParser(description="GitHub Security Scanner")
     parser.add_argument(
         "--action",

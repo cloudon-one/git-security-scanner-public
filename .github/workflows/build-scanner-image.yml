@@ -83,7 +83,7 @@ jobs:
             -c "gitleaks version && trivy version"
 
       - name: Security scan of built image
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@0.31.0
         with:
           image-ref: ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:latest
           format: 'sarif'
