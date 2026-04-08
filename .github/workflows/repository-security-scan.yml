@@ -52,14 +52,14 @@ jobs:
           if [[ "${{ github.event_name }}" == "pull_request" ]]; then
             TAG="pr-${{ github.event.number }}"
           elif [[ "${{ github.ref_name }}" == "main" ]]; then
-            TAG="latest"
+            TAG="v3"
           else
             # Sanitize branch name for Docker tag (replace / with -)
             TAG=$(echo "${{ github.ref_name }}" | sed 's/\//-/g')
           fi
           
           PRIMARY_IMAGE="ghcr.io/${{ github.repository_owner }}/git-security-scanner:${TAG}"
-          FALLBACK_IMAGE="ghcr.io/${{ github.repository_owner }}/git-security-scanner:latest"
+          FALLBACK_IMAGE="ghcr.io/${{ github.repository_owner }}/git-security-scanner:v3"
           
           echo "Checking if primary scanner image is available: ${PRIMARY_IMAGE}"
           
@@ -99,7 +99,7 @@ jobs:
           
           # Extract results for GitHub Actions
           if [[ -f "/tmp/scan-results/json/final-security-report.json" ]]; then
-            RISK_LEVEL=$(jq -r '.metadata.risk_level // "UNKNOWN"' /tmp/scan-results/json/final-security-report.json 2>/dev/null || echo "UNKNOWN")
+            RISK_LEVEL=$(jq -r '.executive_summary.risk_level // "UNKNOWN"' /tmp/scan-results/json/final-security-report.json 2>/dev/null || echo "UNKNOWN")
             echo "status=completed" >> $GITHUB_OUTPUT
             echo "risk-level=${RISK_LEVEL}" >> $GITHUB_OUTPUT
             cp /tmp/scan-results/json/final-security-report.json /tmp/scan-results/summary.json

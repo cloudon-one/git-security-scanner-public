@@ -1,7 +1,7 @@
 .PHONY: build test scan clean
 
 IMAGE_NAME := git-security-scanner
-VERSION := v2.1.0
+VERSION := v3
 
 build:
 	docker build -t $(IMAGE_NAME):$(VERSION) .

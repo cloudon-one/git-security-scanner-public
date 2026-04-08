@@ -87,7 +87,7 @@ FROM alpine:${ALPINE_VERSION}
 LABEL org.opencontainers.image.title="Git Security Scanner" \
     org.opencontainers.image.description="Containerized security scanning tool with Gitleaks, Trivy, and OSV-Scanner" \
     org.opencontainers.image.vendor="CloudOn-One Security Team" \
-    org.opencontainers.image.version="2.1.0" \
+    org.opencontainers.image.version="3.0.0" \
     org.opencontainers.image.url="https://github.com/cloudon-one/git-security-scanner-public" \
     org.opencontainers.image.documentation="https://github.com/cloudon-one/git-security-scanner-public/blob/main/README.md" \
     org.opencontainers.image.source="https://github.com/cloudon-one/git-security-scanner-public" \

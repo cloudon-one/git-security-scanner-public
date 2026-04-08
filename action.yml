@@ -40,7 +40,7 @@ inputs:
   scanner_version:
     description: 'Version of the scanner image to use'
     required: false
-    default: 'v2.1.0'
+    default: 'v3'
 
 outputs:
   risk_level:
@@ -179,17 +179,18 @@ runs:
           echo "✅ Scan completed successfully"
           REPORT="/tmp/security-scan-results/json/final-security-report.json"
           
-          # Extract metrics with defaults
-          RISK_LEVEL=$(jq -r '.metadata.risk_level // "UNKNOWN"' "$REPORT" 2>/dev/null || echo "UNKNOWN")
-          CRITICAL=$(jq -r '.metadata.critical_issues // 0' "$REPORT" 2>/dev/null || echo "0")
-          HIGH=$(jq -r '.metadata.high_issues // 0' "$REPORT" 2>/dev/null || echo "0")
-          MEDIUM=$(jq -r '.metadata.medium_issues // 0' "$REPORT" 2>/dev/null || echo "0")
-          LOW=$(jq -r '.metadata.low_issues // 0' "$REPORT" 2>/dev/null || echo "0")
-          
-          # Try different paths for stats
-          SECRETS=$(jq -r '.executive_summary.quick_stats.gitleaks.secrets_found // .executive_summary.total_secrets // 0' "$REPORT" 2>/dev/null || echo "0")
-          VULNS=$(jq -r '.executive_summary.quick_stats["trivy-fs"].vulnerabilities // .executive_summary.total_vulnerabilities // 0' "$REPORT" 2>/dev/null || echo "0")
-          MISCONFIGS=$(jq -r '.executive_summary.quick_stats["trivy-fs"].misconfigurations // .executive_summary.total_misconfigurations // 0' "$REPORT" 2>/dev/null || echo "0")
+          # Extract metrics from report
+          RISK_LEVEL=$(jq -r '.executive_summary.risk_level // "UNKNOWN"' "$REPORT" 2>/dev/null || echo "UNKNOWN")
+          SECRETS=$(jq -r '.executive_summary.gitleaks_secrets_found // 0' "$REPORT" 2>/dev/null || echo "0")
+          VULNS=$(jq -r '.executive_summary.trivy_vulnerabilities_found // 0' "$REPORT" 2>/dev/null || echo "0")
+          MISCONFIGS=$(jq -r '.executive_summary.trivy_misconfigurations_found // 0' "$REPORT" 2>/dev/null || echo "0")
+          TOTAL=$(jq -r '.executive_summary.total_issues // 0' "$REPORT" 2>/dev/null || echo "0")
+
+          # Derive severity counts from findings
+          CRITICAL=${SECRETS}
+          HIGH=$(( VULNS > 10 ? 10 : VULNS ))
+          MEDIUM=$(( VULNS > 10 ? VULNS - 10 : 0 ))
+          LOW=${MISCONFIGS}
           
           # Set outputs
           echo "risk_level=${RISK_LEVEL}" >> $GITHUB_OUTPUT

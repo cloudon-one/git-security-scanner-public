@@ -54,7 +54,7 @@ jobs:
           tags: |
             type=ref,event=branch
             type=ref,event=pr
-            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=v3,enable={{is_default_branch}}
             type=raw,value=production,enable={{is_default_branch}}
 
       - name: Build and push scanner image
@@ -73,19 +73,19 @@ jobs:
         run: |
           # Test that scanner starts correctly
           docker run --rm --platform=linux/amd64 \
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:latest \
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:v3 \
             --help
-          
+
           # Test tools are available
           docker run --rm --platform=linux/amd64 \
             --entrypoint=/bin/sh \
-            ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:latest \
+            ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:v3 \
             -c "gitleaks version && trivy version"
 
       - name: Security scan of built image
         uses: aquasecurity/trivy-action@0.31.0
         with:
-          image-ref: ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:latest
+          image-ref: ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:v3
           format: 'sarif'
           output: 'image-scan.sarif'
         continue-on-error: true
@@ -102,5 +102,5 @@ jobs:
         if: github.ref == 'refs/heads/main'
         run: |
           echo "✅ Scanner image built and pushed successfully"
-          echo "Image: ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:latest"
+          echo "Image: ${{ env.REGISTRY }}/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}:v3"
           echo "Repository security scan workflow will run automatically on push events"
