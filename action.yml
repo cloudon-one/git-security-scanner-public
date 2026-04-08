@@ -101,18 +101,13 @@ runs:
         echo "Branch: ${{ github.ref }}"
         echo "Event: ${{ github.event_name }}"
     
-    - name: Login to GitHub Container Registry
-      shell: bash
-      run: |
-        echo "🔐 Logging into GitHub Container Registry..."
-        echo "${{ inputs.github_token }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
-    
     - name: Pull scanner image
       id: scanner-image
       shell: bash
       run: |
         IMAGE="ghcr.io/cloudon-one/git-security-scanner-public:${{ inputs.scanner_version }}"
         echo "Pulling scanner image: ${IMAGE}"
+        # Pull anonymously - image is public, no login needed
         docker pull "${IMAGE}"
         echo "image=${IMAGE}" >> $GITHUB_OUTPUT
     
