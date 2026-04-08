@@ -107,43 +107,14 @@ runs:
         echo "🔐 Logging into GitHub Container Registry..."
         echo "${{ inputs.github_token }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
     
-    - name: Determine scanner image
+    - name: Pull scanner image
       id: scanner-image
       shell: bash
       run: |
-        echo "🔍 Determining scanner image to use..."
-        
-        # Determine the appropriate Docker tag
-        if [[ "${{ github.event_name }}" == "pull_request" ]]; then
-          TAG="pr-${{ github.event.number }}"
-        elif [[ "${{ github.ref_name }}" == "main" ]]; then
-          TAG="${{ inputs.scanner_version }}"
-        else
-          # Sanitize branch name for Docker tag
-          TAG=$(echo "${{ github.ref_name }}" | sed 's/\//-/g')
-        fi
-        
-        PRIMARY_IMAGE="ghcr.io/cloudon-one/git-security-scanner:${TAG}"
-        FALLBACK_IMAGE="ghcr.io/cloudon-one/git-security-scanner:${{ inputs.scanner_version }}"
-        
-        echo "Primary image: ${PRIMARY_IMAGE}"
-        echo "Fallback image: ${FALLBACK_IMAGE}"
-        
-        # Try primary image first
-        if docker manifest inspect "${PRIMARY_IMAGE}" > /dev/null 2>&1; then
-          echo "✅ Using primary image: ${PRIMARY_IMAGE}"
-          echo "image=${PRIMARY_IMAGE}" >> $GITHUB_OUTPUT
-        else
-          echo "⚠️ Primary image not found, trying fallback..."
-          if docker manifest inspect "${FALLBACK_IMAGE}" > /dev/null 2>&1; then
-            echo "✅ Using fallback image: ${FALLBACK_IMAGE}"
-            echo "image=${FALLBACK_IMAGE}" >> $GITHUB_OUTPUT
-          else
-            echo "❌ No suitable scanner image found!"
-            echo "Please ensure the scanner image is built and pushed to the registry."
-            exit 1
-          fi
-        fi
+        IMAGE="ghcr.io/cloudon-one/git-security-scanner:${{ inputs.scanner_version }}"
+        echo "Pulling scanner image: ${IMAGE}"
+        docker pull "${IMAGE}"
+        echo "image=${IMAGE}" >> $GITHUB_OUTPUT
     
     - name: Run security scan
       id: scan
