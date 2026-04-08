@@ -111,7 +111,7 @@ runs:
       id: scanner-image
       shell: bash
       run: |
-        IMAGE="ghcr.io/cloudon-one/git-security-scanner:${{ inputs.scanner_version }}"
+        IMAGE="ghcr.io/cloudon-one/git-security-scanner-public:${{ inputs.scanner_version }}"
         echo "Pulling scanner image: ${IMAGE}"
         docker pull "${IMAGE}"
         echo "image=${IMAGE}" >> $GITHUB_OUTPUT
